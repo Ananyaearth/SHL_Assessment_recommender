@@ -1,4 +1,7 @@
 streamlit
 google-generativeai
-chromadb
 sentence-transformers
+chromadb
+transformers
+torch
+huggingface-hub
