@@ -1,38 +1,30 @@
-import os
 import streamlit as st
 import pandas as pd
-import google.generativeai as genai
-from sentence_transformers import SentenceTransformer
 import numpy as np
 import faiss
+import os
+import pickle
+from sentence_transformers import SentenceTransformer
+import google.generativeai as genai
 
-# Configure Gemini API key
-genai.configure(api_key="AIzaSyASKTzSNuMbJMdZWr81Xuw2hS1Poe3acZo")  # replace with st.secrets later
-model_gemini = genai.GenerativeModel("gemini-2.5-pro-exp-03-25")
+# Configure Gemini API key (from Streamlit secrets)
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-# Load embedding model
+# Load model
 model = SentenceTransformer('all-MiniLM-L6-v2')
 
-# Load CSV
-df = pd.read_csv("shl_catalog_detailed.csv")  # ensure full filename with .csv
-documents = df["description"].tolist()
-ids = [str(i) for i in range(len(documents))]
+# Load FAISS index and documents
+faiss_index = faiss.read_index("faiss_index.bin")
+with open("documents.pkl", "rb") as f:
+    index_to_doc = pickle.load(f)
 
-# Generate embeddings
-embeddings = model.encode(documents, convert_to_numpy=True).astype("float32")
-
-# Initialize FAISS index
-dimension = embeddings.shape[1]
-index = faiss.IndexFlatL2(dimension)
-index.add(embeddings)
-
-# Search function using FAISS
+# Search function
 def search_documents(query, top_k=10):
-    query_embedding = model.encode([query], convert_to_numpy=True).astype("float32")
-    D, I = index.search(query_embedding, top_k)
-    return [documents[i] for i in I[0]]
+    query_embedding = model.encode([query]).astype('float32')
+    distances, indices = faiss_index.search(query_embedding, top_k)
+    return [index_to_doc[i] for i in indices[0]]
 
-# Gemini response generator
+# Prompt + Gemini generation
 def ask_rag_question(query):
     context_chunks = search_documents(query)
     context = "\n\n".join(context_chunks)
@@ -55,19 +47,16 @@ You are an expert in HR assessments. Based on the context below, identify all as
 
 ### Answer:
 """
-    response = model_gemini.generate_content(prompt)
+    response = genai.generate_content(prompt)
     return response.text
 
 # Streamlit UI
-st.set_page_config(page_title="SHL Catalog Assistant", layout="wide")
-st.title("🧠 SHL Assessment Recommendation System")
+st.set_page_config(page_title="SHL Assessment Recommender", layout="wide")
+st.title("🔍 SHL Assessment Recommender (RAG + FAISS + Gemini)")
 
-query = st.text_area("Enter your hiring requirement or question:", height=150)
+query = st.text_input("Enter your hiring requirement (e.g., Java developer with business skills)...")
 
-if st.button("Search & Recommend"):
-    if not query.strip():
-        st.warning("Please enter a valid query.")
-    else:
-        with st.spinner("Processing..."):
-            output = ask_rag_question(query)
-            st.markdown(output)
+if query:
+    with st.spinner("Finding the most suitable assessments..."):
+        result = ask_rag_question(query)
+        st.markdown(result, unsafe_allow_html=True)
