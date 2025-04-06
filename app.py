@@ -8,7 +8,7 @@ from sentence_transformers import SentenceTransformer
 import google.generativeai as genai
 
 # Configure Gemini API key (from Streamlit secrets)
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+genai.configure(api_key=os.getenv("AIzaSyASKTzSNuMbJMdZWr81Xuw2hS1Poe3acZo"))
 
 # Load model
 model = SentenceTransformer('all-MiniLM-L6-v2')
