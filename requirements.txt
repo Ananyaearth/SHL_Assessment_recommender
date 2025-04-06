@@ -5,3 +5,4 @@ chromadb
 transformers
 torch
 huggingface-hub
+pysqlite3-binary
