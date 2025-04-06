@@ -2,10 +2,6 @@ import os
 import streamlit as st
 import pandas as pd
 import google.generativeai as genai
-import sys
-import pysqlite3
-sys.modules["sqlite3"] = pysqlite3
-
 import chromadb
 from sentence_transformers import SentenceTransformer
 
@@ -17,7 +13,7 @@ model_gemini = genai.GenerativeModel("gemini-2.5-pro-exp-03-25")
 model = SentenceTransformer('all-MiniLM-L6-v2')
 
 # Load CSV
-df = pd.read_csv("your_data.csv")  # <- Replace with your actual filename
+df = pd.read_csv("shl_catalog_detailed")  # <- Replace with your actual filename
 documents = df["description"].tolist()  # or whichever column has text
 ids = [str(i) for i in range(len(documents))]
 
