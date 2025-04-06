@@ -1,23 +1,30 @@
 import os
 import streamlit as st
+import pandas as pd
 import google.generativeai as genai
 import chromadb
 from sentence_transformers import SentenceTransformer
 
-# --- 1. Use environment variable or secret for API Key ---
-genai.configure(api_key=st.secrets["AIzaSyASKTzSNuMbJMdZWr81Xuw2hS1Poe3acZo"])  # Set this in Streamlit Cloud secrets
+# Configure Gemini API key
+genai.configure(api_key="AIzaSyASKTzSNuMbJMdZWr81Xuw2hS1Poe3acZo")  # replace with st.secrets or env variable later
 model_gemini = genai.GenerativeModel("gemini-2.5-pro-exp-03-25")
 
-# --- 2. Use Hugging Face cache path (required by Streamlit) ---
-os.environ["HF_HOME"] = "./hf_cache"  # persistent cache to avoid download errors
+# Load embedding model
 model = SentenceTransformer('all-MiniLM-L6-v2')
 
-# --- 3. Use a relative path for Chroma DB ---
-CHROMA_PATH = "chroma_database"  # path inside repo, not /content
-chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
+# Load CSV
+df = pd.read_csv("your_data.csv")  # <- Replace with your actual filename
+documents = df["description"].tolist()  # or whichever column has text
+ids = [str(i) for i in range(len(documents))]
+
+# In-memory Chroma client
+chroma_client = chromadb.Client()
 collection = chroma_client.get_or_create_collection(name="shl_data")
 
-# --- 4. Search similar documents ---
+# Add documents to collection
+collection.add(documents=documents, ids=ids)
+
+# Search function
 def search_documents(query, top_k=10):
     query_embedding = model.encode([query])[0]
     results = collection.query(
@@ -26,7 +33,7 @@ def search_documents(query, top_k=10):
     )
     return results['documents'][0]
 
-# --- 5. Generate response from Gemini ---
+# Gemini response generator
 def ask_rag_question(query):
     context_chunks = search_documents(query)
     context = "\n\n".join(context_chunks)
@@ -52,7 +59,7 @@ You are an expert in HR assessments. Based on the context below, identify all as
     response = model_gemini.generate_content(prompt)
     return response.text
 
-# --- 6. Streamlit UI ---
+# Streamlit UI
 st.set_page_config(page_title="SHL Catalog Assistant", layout="wide")
 st.title("🧠 SHL Assessment Recommendation System")
 
