@@ -1,8 +1,5 @@
-google-generativeai
+faiss-cpu
 sentence-transformers
-chromadb
-pysqlite3-binary
+pandas
+google-generativeai
 streamlit
-transformers
-torch
-huggingface-hub
