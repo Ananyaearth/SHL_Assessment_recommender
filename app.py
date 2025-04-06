@@ -2,36 +2,35 @@ import os
 import streamlit as st
 import pandas as pd
 import google.generativeai as genai
-import chromadb
 from sentence_transformers import SentenceTransformer
+import numpy as np
+import faiss
 
 # Configure Gemini API key
-genai.configure(api_key="AIzaSyASKTzSNuMbJMdZWr81Xuw2hS1Poe3acZo")  # replace with st.secrets or env variable later
+genai.configure(api_key="AIzaSyASKTzSNuMbJMdZWr81Xuw2hS1Poe3acZo")  # replace with st.secrets later
 model_gemini = genai.GenerativeModel("gemini-2.5-pro-exp-03-25")
 
 # Load embedding model
 model = SentenceTransformer('all-MiniLM-L6-v2')
 
 # Load CSV
-df = pd.read_csv("shl_catalog_detailed")  # <- Replace with your actual filename
-documents = df["description"].tolist()  # or whichever column has text
+df = pd.read_csv("shl_catalog_detailed.csv")  # ensure full filename with .csv
+documents = df["description"].tolist()
 ids = [str(i) for i in range(len(documents))]
 
-# In-memory Chroma client
-chroma_client = chromadb.Client()
-collection = chroma_client.get_or_create_collection(name="shl_data")
+# Generate embeddings
+embeddings = model.encode(documents, convert_to_numpy=True).astype("float32")
 
-# Add documents to collection
-collection.add(documents=documents, ids=ids)
+# Initialize FAISS index
+dimension = embeddings.shape[1]
+index = faiss.IndexFlatL2(dimension)
+index.add(embeddings)
 
-# Search function
+# Search function using FAISS
 def search_documents(query, top_k=10):
-    query_embedding = model.encode([query])[0]
-    results = collection.query(
-        query_embeddings=[query_embedding.tolist()],
-        n_results=top_k
-    )
-    return results['documents'][0]
+    query_embedding = model.encode([query], convert_to_numpy=True).astype("float32")
+    D, I = index.search(query_embedding, top_k)
+    return [documents[i] for i in I[0]]
 
 # Gemini response generator
 def ask_rag_question(query):
