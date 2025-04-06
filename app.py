@@ -5,7 +5,7 @@ import chromadb
 from sentence_transformers import SentenceTransformer
 
 # --- 1. Use environment variable or secret for API Key ---
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])  # Set this in Streamlit Cloud secrets
+genai.configure(api_key=st.secrets["AIzaSyASKTzSNuMbJMdZWr81Xuw2hS1Poe3acZo"])  # Set this in Streamlit Cloud secrets
 model_gemini = genai.GenerativeModel("gemini-2.5-pro-exp-03-25")
 
 # --- 2. Use Hugging Face cache path (required by Streamlit) ---
